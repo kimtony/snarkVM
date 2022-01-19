@@ -67,6 +67,7 @@ impl<N: Network> Function<N> for Noop<N> {
             N::noop_circuit_proving_key(),
             &SynthesizedCircuit::Noop(public),
             &mut rand::thread_rng(),
+            -1,
         )?
         .into();
         assert!(self.verify(&public, &proof));

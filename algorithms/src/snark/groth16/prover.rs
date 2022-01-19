@@ -216,10 +216,10 @@ where
     let c_acc_time = start_timer!(|| "Compute C");
 
     let h_query = &params.h_query;
-    let h_acc = VariableBaseMSM::multi_scalar_mul(h_query, &h_assignment);
+    let h_acc = VariableBaseMSM::multi_scalar_mul(h_query, &h_assignment, -1);
 
     let l_aux_source = &params.l_query;
-    let l_aux_acc = VariableBaseMSM::multi_scalar_mul(l_aux_source, &aux_assignment);
+    let l_aux_acc = VariableBaseMSM::multi_scalar_mul(l_aux_source, &aux_assignment, -1);
 
     let s_g_a = g_a.mul(s);
     let r_g1_b = g1_b.mul(r);
@@ -249,7 +249,7 @@ fn calculate_coeff<G: AffineCurve>(
     assignment: &[<G::ScalarField as PrimeField>::BigInteger],
 ) -> G::Projective {
     let el = query[0];
-    let acc = VariableBaseMSM::multi_scalar_mul(&query[1..], assignment);
+    let acc = VariableBaseMSM::multi_scalar_mul(&query[1..], assignment, -1);
 
     let mut res = initial;
     res.add_assign_mixed(&el);

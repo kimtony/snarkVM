@@ -24,6 +24,7 @@ use snarkvm_utilities::BitIteratorBE;
 use rust_gpu_tools::{cuda, program_closures, Device, GPUError, Program};
 
 use std::any::TypeId;
+use std::sync::RwLock;
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
@@ -55,13 +56,7 @@ struct CudaAffine {
 }
 
 /// Loads the msm.fatbin into an executable CUDA program.
-fn load_cuda_program() -> Result<Program, GPUError> {
-    let devices: Vec<_> = Device::all();
-    let device = match devices.first() {
-        Some(device) => device,
-        None => return Err(GPUError::DeviceNotFound),
-    };
-
+fn load_cuda_program(device: &Device) -> Result<Program, GPUError> {
     // The executable was compiled with (from build.sh):
     // nvcc ./asm_cuda.cu ./blst_377_ops.cu ./msm.cu -gencode=arch=compute_52,code=sm_52 -gencode=arch=compute_60,code=sm_60 -gencode=arch=compute_61,code=sm_61 -gencode=arch=compute_70,code=sm_70 -gencode=arch=compute_75,code=sm_75 -gencode=arch=compute_75,code=compute_75 -dlink -fatbin -o ./msm.fatbin
     let cuda_kernel = include_bytes!("./blst_377_cuda/msm.fatbin");
@@ -179,8 +174,8 @@ fn handle_cuda_request(context: &mut CudaContext, request: &CudaRequest) -> Resu
 }
 
 /// Initialize the cuda request handler.
-fn initialize_cuda_request_handler(input: crossbeam_channel::Receiver<CudaRequest>) {
-    match load_cuda_program() {
+fn initialize_cuda_request_handler(input: crossbeam_channel::Receiver<CudaRequest>, device: &Device) {
+    match load_cuda_program(device) {
         Ok(program) => {
             let num_groups = (SCALAR_BITS + BIT_WIDTH - 1) / BIT_WIDTH;
 
@@ -207,21 +202,36 @@ fn initialize_cuda_request_handler(input: crossbeam_channel::Receiver<CudaReques
     }
 }
 
-lazy_static::lazy_static! {
-    static ref CUDA_DISPATCH: crossbeam_channel::Sender<CudaRequest> = {
+fn initialize_cuda_request_dispatcher() {
+    if let Ok(dispatchers) = CUDA_DISPATCH.read() {
+        if dispatchers.len() > 0 {
+            return;
+        }
+    }
+    let devices: Vec<_> = Device::all();
+    for device in devices {
         let (sender, receiver) = crossbeam_channel::bounded(4096);
-        std::thread::spawn(move || initialize_cuda_request_handler(receiver));
-        sender
-    };
+        std::thread::spawn(move || initialize_cuda_request_handler(receiver, device));
+        if let Ok(mut dispatchers) = CUDA_DISPATCH.write() {
+            dispatchers.push(sender);
+        }
+    }
+}
+
+lazy_static::lazy_static! {
+    static ref CUDA_DISPATCH: RwLock<Vec<crossbeam_channel::Sender<CudaRequest>>> =
+        RwLock::new(Vec::new());
 }
 
 pub(super) fn msm_cuda<G: AffineCurve>(
     mut bases: &[G],
     mut scalars: &[<G::ScalarField as PrimeField>::BigInteger],
+    gpu_index: i16,
 ) -> Result<G::Projective, GPUError> {
     if TypeId::of::<G>() != TypeId::of::<G1Affine>() {
         unimplemented!("trying to use cuda for unsupported curve");
     }
+    initialize_cuda_request_dispatcher();
 
     match bases.len() < scalars.len() {
         true => scalars = &scalars[..bases.len()],
@@ -238,16 +248,23 @@ pub(super) fn msm_cuda<G: AffineCurve>(
     }
 
     let (sender, receiver) = crossbeam_channel::bounded(1);
-    CUDA_DISPATCH
-        .send(CudaRequest {
-            bases: unsafe { std::mem::transmute(bases.to_vec()) },
-            scalars: unsafe { std::mem::transmute(scalars.to_vec()) },
-            response: sender,
-        })
-        .map_err(|_| GPUError::DeviceNotFound)?;
-    match receiver.recv() {
-        Ok(x) => unsafe { std::mem::transmute_copy(&x) },
-        Err(_) => Err(GPUError::DeviceNotFound),
+    if let Ok(dispatchers) = CUDA_DISPATCH.read() {
+        if let Some(dispatcher) = dispatchers.get(gpu_index as usize) {
+            dispatcher.send(CudaRequest {
+                bases: unsafe { std::mem::transmute(bases.to_vec()) },
+                scalars: unsafe { std::mem::transmute(scalars.to_vec()) },
+                response: sender,
+            })
+            .map_err(|_| GPUError::DeviceNotFound)?;
+            match receiver.recv() {
+                Ok(x) => unsafe { std::mem::transmute_copy(&x) },
+                Err(_) => Err(GPUError::DeviceNotFound),
+            }
+        } else {
+            Err(GPUError::DeviceNotFound)
+        }
+    } else {
+        Err(GPUError::Generic("Failed to read cuda dispatchers".to_string()))
     }
 }
 

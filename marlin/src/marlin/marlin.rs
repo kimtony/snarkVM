@@ -94,6 +94,7 @@ impl<
     pub fn circuit_specific_setup<C: ConstraintSynthesizer<TargetField>, R: RngCore>(
         c: &C,
         rng: &mut R,
+        gpu_index: i16,
     ) -> Result<
         (
             CircuitProvingKey<TargetField, BaseField, PC, MM>,
@@ -139,7 +140,7 @@ impl<
 
         let commit_time = start_timer!(|| "Commit to index polynomials");
         let (circuit_commitments, circuit_commitment_randomness): (_, _) =
-            PC::commit(&committer_key, circuit.iter().chain(vanishing_polys.iter()), None)?;
+            PC::commit(&committer_key, circuit.iter().chain(vanishing_polys.iter()), None, gpu_index)?;
         end_timer!(commit_time);
 
         let circuit_commitments = circuit_commitments
@@ -171,6 +172,7 @@ impl<
     pub fn circuit_setup<C: ConstraintSynthesizer<TargetField>>(
         universal_srs: &UniversalSRS<TargetField, BaseField, PC>,
         circuit: &C,
+        gpu_index: i16,
     ) -> Result<
         (
             CircuitProvingKey<TargetField, BaseField, PC, MM>,
@@ -225,7 +227,7 @@ impl<
 
         let commit_time = start_timer!(|| "Commit to index polynomials");
         let (circuit_commitments, circuit_commitment_randomness): (_, _) =
-            PC::commit(&committer_key, index.iter().chain(vanishing_polynomials.iter()), None)?;
+            PC::commit(&committer_key, index.iter().chain(vanishing_polynomials.iter()), None, gpu_index)?;
         end_timer!(commit_time);
 
         let circuit_commitments = circuit_commitments
@@ -256,8 +258,9 @@ impl<
         circuit_proving_key: &CircuitProvingKey<TargetField, BaseField, PC, MM>,
         circuit: &C,
         zk_rng: &mut R,
+        gpu_index: i16,
     ) -> Result<Proof<TargetField, BaseField, PC>, MarlinError> {
-        Self::prove_with_terminator(circuit_proving_key, circuit, &AtomicBool::new(false), zk_rng)
+        Self::prove_with_terminator(circuit_proving_key, circuit, &AtomicBool::new(false), zk_rng, gpu_index)
     }
 
     /// Same as [`prove`] with an added termination flag, [`terminator`].
@@ -266,6 +269,7 @@ impl<
         circuit: &C,
         terminator: &AtomicBool,
         zk_rng: &mut R,
+        gpu_index: i16,
     ) -> Result<Proof<TargetField, BaseField, PC>, MarlinError> {
         let prover_time = start_timer!(|| "Marlin::Prover");
         // TODO: Add check that c is in the correct mode.
@@ -314,6 +318,7 @@ impl<
             &circuit_proving_key.committer_key,
             prover_first_oracles.iter(),
             Some(zk_rng),
+            gpu_index,
         )?;
         end_timer!(first_round_comm_time);
 
@@ -352,6 +357,7 @@ impl<
             prover_second_oracles.iter(),
             terminator,
             Some(zk_rng),
+            gpu_index,
         )?;
         end_timer!(second_round_comm_time);
 
@@ -388,6 +394,7 @@ impl<
             prover_third_oracles.iter(),
             terminator,
             Some(zk_rng),
+            gpu_index,
         )?;
         end_timer!(third_round_comm_time);
 
@@ -538,6 +545,7 @@ impl<
                 &query_set,
                 &opening_challenges_f,
                 &commitment_randomnesses,
+                gpu_index,
             )?
         } else {
             let opening_challenge: TargetField = fs_rng.squeeze_128_bits_nonnative_field_elements(1)?[0];
@@ -551,6 +559,7 @@ impl<
                 opening_challenge,
                 &commitment_randomnesses,
                 Some(zk_rng),
+                gpu_index,
             )?
         };
 

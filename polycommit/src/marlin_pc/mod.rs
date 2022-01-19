@@ -207,6 +207,7 @@ impl<E: PairingEngine> PolynomialCommitment<E::Fr, E::Fq> for MarlinKZG10<E> {
         polynomials: impl IntoIterator<Item = &'a LabeledPolynomial<E::Fr>>,
         terminator: &AtomicBool,
         rng: Option<&mut dyn RngCore>,
+        gpu_index: i16,
     ) -> Result<(Vec<LabeledCommitment<Self::Commitment>>, Vec<Self::Randomness>), Error> {
         let rng = &mut crate::optional_rng::OptionalRng(rng);
         let commit_time = start_timer!(|| "Committing to polynomials");
@@ -244,13 +245,13 @@ impl<E: PairingEngine> PolynomialCommitment<E::Fr, E::Fq> for MarlinKZG10<E> {
                 hiding_bound,
             ));
 
-            let (comm, rand) = kzg10::KZG10::commit(&ck.powers(), polynomial, hiding_bound, terminator, Some(rng))?;
+            let (comm, rand) = kzg10::KZG10::commit(&ck.powers(), polynomial, hiding_bound, terminator, Some(rng), gpu_index)?;
             let (shifted_comm, shifted_rand) = if let Some(degree_bound) = degree_bound {
                 let shifted_powers = ck
                     .shifted_powers(degree_bound)
                     .ok_or(Error::UnsupportedDegreeBound(degree_bound))?;
                 let (shifted_comm, shifted_rand) =
-                    kzg10::KZG10::commit(&shifted_powers, polynomial, hiding_bound, terminator, Some(rng))?;
+                    kzg10::KZG10::commit(&shifted_powers, polynomial, hiding_bound, terminator, Some(rng), gpu_index)?;
                 (Some(shifted_comm), Some(shifted_rand))
             } else {
                 (None, None)
@@ -275,6 +276,7 @@ impl<E: PairingEngine> PolynomialCommitment<E::Fr, E::Fq> for MarlinKZG10<E> {
         opening_challenge: E::Fr,
         rands: impl IntoIterator<Item = &'a Self::Randomness>,
         _rng: Option<&mut dyn RngCore>,
+        gpu_index: i16,
     ) -> Result<Self::Proof, Error>
     where
         Self::Randomness: 'a,
@@ -323,7 +325,7 @@ impl<E: PairingEngine> PolynomialCommitment<E::Fr, E::Fq> for MarlinKZG10<E> {
             }
         }
         let proof_time = start_timer!(|| "Creating proof for unshifted polynomials");
-        let proof = kzg10::KZG10::open(&ck.powers(), &p, point, &r)?;
+        let proof = kzg10::KZG10::open(&ck.powers(), &p, point, &r, gpu_index)?;
         let mut w = proof.w.into_projective();
         let mut random_v = proof.random_v;
         end_timer!(proof_time);
@@ -336,6 +338,7 @@ impl<E: PairingEngine> PolynomialCommitment<E::Fr, E::Fq> for MarlinKZG10<E> {
                 &shifted_r,
                 &shifted_w,
                 Some(&shifted_r_witness),
+                gpu_index,
             )?;
             end_timer!(proof_time);
 
@@ -448,6 +451,7 @@ impl<E: PairingEngine> PolynomialCommitment<E::Fr, E::Fq> for MarlinKZG10<E> {
         opening_challenge: E::Fr,
         rands: impl IntoIterator<Item = &'a Self::Randomness>,
         rng: Option<&mut dyn RngCore>,
+        gpu_index: i16,
     ) -> Result<BatchLCProof<E::Fr, E::Fq, Self>, Error>
     where
         Self::Randomness: 'a,
@@ -524,6 +528,7 @@ impl<E: PairingEngine> PolynomialCommitment<E::Fr, E::Fq> for MarlinKZG10<E> {
             opening_challenge,
             lc_randomness.iter(),
             rng,
+            gpu_index,
         )?;
 
         Ok(BatchLCProof {
@@ -624,6 +629,7 @@ impl<E: PairingEngine> PolynomialCommitment<E::Fr, E::Fq> for MarlinKZG10<E> {
         query_set: &QuerySet<E::Fr>,
         opening_challenges: &dyn Fn(u64) -> E::Fr,
         rands: impl IntoIterator<Item = &'a Self::Randomness>,
+        gpu_index: i16,
     ) -> Result<BatchLCProof<E::Fr, E::Fq, Self>, Error>
     where
         Self::Randomness: 'a,
@@ -690,6 +696,7 @@ impl<E: PairingEngine> PolynomialCommitment<E::Fr, E::Fq> for MarlinKZG10<E> {
             query_set,
             opening_challenges,
             lc_randomness.iter(),
+            gpu_index,
         )?;
 
         Ok(BatchLCProof {
@@ -790,6 +797,7 @@ impl<E: PairingEngine> MarlinKZG10<E> {
         point: &'a E::Fr,
         opening_challenges: &dyn Fn(u64) -> E::Fr,
         rands: impl IntoIterator<Item = &'a <Self as PolynomialCommitment<E::Fr, E::Fq>>::Randomness>,
+        gpu_index: i16,
     ) -> Result<<Self as PolynomialCommitment<E::Fr, E::Fq>>::Proof, Error>
     where
         <Self as PolynomialCommitment<E::Fr, E::Fq>>::Randomness: 'a,
@@ -845,7 +853,7 @@ impl<E: PairingEngine> MarlinKZG10<E> {
             }
         }
         let proof_time = start_timer!(|| "Creating proof for unshifted polynomials");
-        let proof = kzg10::KZG10::open(&ck.powers(), &p, *point, &r)?;
+        let proof = kzg10::KZG10::open(&ck.powers(), &p, *point, &r, gpu_index)?;
         let mut w = proof.w.into_projective();
         let mut random_v = proof.random_v;
         end_timer!(proof_time);
@@ -858,6 +866,7 @@ impl<E: PairingEngine> MarlinKZG10<E> {
                 &shifted_r,
                 &shifted_w,
                 Some(&shifted_r_witness),
+                gpu_index,
             )?;
             end_timer!(proof_time);
 
@@ -884,6 +893,7 @@ impl<E: PairingEngine> MarlinKZG10<E> {
         query_set: &QuerySet<E::Fr>,
         opening_challenges: &dyn Fn(u64) -> E::Fr,
         rands: impl IntoIterator<Item = &'a <Self as PolynomialCommitment<E::Fr, E::Fq>>::Randomness>,
+        gpu_index: i16,
     ) -> Result<<Self as PolynomialCommitment<E::Fr, E::Fq>>::BatchProof, Error>
     where
         <Self as PolynomialCommitment<E::Fr, E::Fq>>::Randomness: 'a,
@@ -938,6 +948,7 @@ impl<E: PairingEngine> MarlinKZG10<E> {
                 query,
                 opening_challenges,
                 query_rands,
+                gpu_index,
             )?;
 
             end_timer!(proof_time);

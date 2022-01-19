@@ -226,8 +226,9 @@ pub trait PolynomialCommitment<F: PrimeField, CF: PrimeField>: Sized + Clone + D
         ck: &Self::CommitterKey,
         polynomials: impl IntoIterator<Item = &'a LabeledPolynomial<F>>,
         rng: Option<&mut dyn RngCore>,
+        gpu_index: i16,
     ) -> Result<(Vec<LabeledCommitment<Self::Commitment>>, Vec<Self::Randomness>), Error> {
-        Self::commit_with_terminator(ck, polynomials, &AtomicBool::new(false), rng)
+        Self::commit_with_terminator(ck, polynomials, &AtomicBool::new(false), rng, gpu_index)
     }
 
     /// Like [`commit`] but with an added early termination signal, [`terminator`].
@@ -237,6 +238,7 @@ pub trait PolynomialCommitment<F: PrimeField, CF: PrimeField>: Sized + Clone + D
         polynomials: impl IntoIterator<Item = &'a LabeledPolynomial<F>>,
         terminator: &AtomicBool,
         rng: Option<&mut dyn RngCore>,
+        gpu_index: i16,
     ) -> Result<(Vec<LabeledCommitment<Self::Commitment>>, Vec<Self::Randomness>), Error>;
 
     /// On input a list of labeled polynomials and a query point, `open` outputs a proof of evaluation
@@ -249,6 +251,7 @@ pub trait PolynomialCommitment<F: PrimeField, CF: PrimeField>: Sized + Clone + D
         opening_challenge: F,
         rands: impl IntoIterator<Item = &'a Self::Randomness>,
         rng: Option<&mut dyn RngCore>,
+        gpu_index: i16,
     ) -> Result<Self::Proof, Error>
     where
         Self::Randomness: 'a,
@@ -264,6 +267,7 @@ pub trait PolynomialCommitment<F: PrimeField, CF: PrimeField>: Sized + Clone + D
         opening_challenge: F,
         rands: impl IntoIterator<Item = &'a Self::Randomness>,
         rng: Option<&mut dyn RngCore>,
+        gpu_index: i16,
     ) -> Result<Self::BatchProof, Error>
     where
         Self::Randomness: 'a,
@@ -317,6 +321,7 @@ pub trait PolynomialCommitment<F: PrimeField, CF: PrimeField>: Sized + Clone + D
                 opening_challenge,
                 query_rands,
                 Some(rng),
+                gpu_index,
             )?;
 
             end_timer!(proof_time);
@@ -409,6 +414,7 @@ pub trait PolynomialCommitment<F: PrimeField, CF: PrimeField>: Sized + Clone + D
         opening_challenge: F,
         rands: impl IntoIterator<Item = &'a Self::Randomness>,
         rng: Option<&mut dyn RngCore>,
+        gpu_index: i16,
     ) -> Result<BatchLCProof<F, CF, Self>, Error>
     where
         Self::Randomness: 'a,
@@ -426,6 +432,7 @@ pub trait PolynomialCommitment<F: PrimeField, CF: PrimeField>: Sized + Clone + D
             opening_challenge,
             rands,
             rng,
+            gpu_index,
         )?;
         Ok(BatchLCProof {
             proof,
@@ -519,6 +526,7 @@ pub trait PolynomialCommitment<F: PrimeField, CF: PrimeField>: Sized + Clone + D
         query_set: &QuerySet<F>,
         opening_challenges: &dyn Fn(u64) -> F,
         rands: impl IntoIterator<Item = &'a Self::Randomness>,
+        gpu_index: i16,
     ) -> Result<BatchLCProof<F, CF, Self>, Error>
     where
         Self::Randomness: 'a,

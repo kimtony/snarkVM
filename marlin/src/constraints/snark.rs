@@ -81,12 +81,13 @@ where
     fn setup<C: ConstraintSynthesizer<TargetField>, R: Rng + CryptoRng>(
         circuit: &C,
         srs: &mut SRS<R, Self::UniversalSetupParameters>,
+        gpu_index: i16,
     ) -> Result<(Self::ProvingKey, Self::VerifyingKey), SNARKError> {
         let (pk, vk) = match srs {
             SRS::CircuitSpecific(rng) => {
-                MarlinCore::<TargetField, BaseField, PC, FS, MM>::circuit_specific_setup(circuit, rng)?
+                MarlinCore::<TargetField, BaseField, PC, FS, MM>::circuit_specific_setup(circuit, rng, gpu_index)?
             }
-            SRS::Universal(srs) => MarlinCore::<TargetField, BaseField, PC, FS, MM>::circuit_setup(srs, circuit)?,
+            SRS::Universal(srs) => MarlinCore::<TargetField, BaseField, PC, FS, MM>::circuit_setup(srs, circuit, gpu_index)?,
         };
         Ok((pk, vk))
     }
@@ -96,9 +97,10 @@ where
         circuit: &C,
         terminator: &AtomicBool,
         rng: &mut R,
+        gpu_index: i16,
     ) -> Result<Self::Proof, SNARKError> {
         match MarlinCore::<TargetField, BaseField, PC, FS, MM>::prove_with_terminator(
-            parameters, circuit, terminator, rng,
+            parameters, circuit, terminator, rng, gpu_index,
         ) {
             Ok(res) => Ok(res),
             Err(e) => Err(SNARKError::from(e)),
