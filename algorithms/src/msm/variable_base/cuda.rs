@@ -229,7 +229,15 @@ pub(super) fn msm_cuda<G: AffineCurve>(
     if TypeId::of::<G>() != TypeId::of::<G1Affine>() {
         unimplemented!("trying to use cuda for unsupported curve");
     }
-    initialize_cuda_request_dispatcher();
+    let len;
+    if let Ok(dispatchers) = CUDA_DISPATCH.read() {
+        len = dispatchers.len();
+    } else {
+        len = 0;
+    }
+    if len == 0 {
+        initialize_cuda_request_dispatcher();
+    }
 
     match bases.len() < scalars.len() {
         true => scalars = &scalars[..bases.len()],
@@ -246,23 +254,25 @@ pub(super) fn msm_cuda<G: AffineCurve>(
     }
 
     let (sender, receiver) = crossbeam_channel::bounded(1);
+    let dispatcher;
     if let Ok(dispatchers) = CUDA_DISPATCH.read() {
-        if let Some(dispatcher) = dispatchers.get(gpu_index as usize) {
-            dispatcher.send(CudaRequest {
-                bases: unsafe { std::mem::transmute(bases.to_vec()) },
-                scalars: unsafe { std::mem::transmute(scalars.to_vec()) },
-                response: sender,
-            })
-            .map_err(|_| GPUError::DeviceNotFound)?;
-            match receiver.recv() {
-                Ok(x) => unsafe { std::mem::transmute_copy(&x) },
-                Err(_) => Err(GPUError::DeviceNotFound),
-            }
+        if let Some(d) = dispatchers.get(gpu_index as usize) {
+            dispatcher = d;
         } else {
-            Err(GPUError::DeviceNotFound)
+            return Err(GPUError::DeviceNotFound);
         }
     } else {
-        Err(GPUError::Generic("Failed to read cuda dispatchers".to_string()))
+        return Err(GPUError::Generic("Failed to read cuda dispatchers".to_string()));
+    }
+    dispatcher.send(CudaRequest {
+        bases: unsafe { std::mem::transmute(bases.to_vec()) },
+        scalars: unsafe { std::mem::transmute(scalars.to_vec()) },
+        response: sender,
+    })
+        .map_err(|_| GPUError::DeviceNotFound)?;
+    match receiver.recv() {
+        Ok(x) => unsafe { std::mem::transmute_copy(&x) },
+        Err(_) => Err(GPUError::DeviceNotFound),
     }
 }
 
