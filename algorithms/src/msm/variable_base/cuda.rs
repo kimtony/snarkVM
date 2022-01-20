@@ -203,16 +203,14 @@ fn initialize_cuda_request_handler(input: crossbeam_channel::Receiver<CudaReques
 }
 
 fn initialize_cuda_request_dispatcher() {
-    if let Ok(dispatchers) = CUDA_DISPATCH.read() {
+    if let Ok(mut dispatchers) = CUDA_DISPATCH.write() {
         if dispatchers.len() > 0 {
             return;
         }
-    }
-    let devices: Vec<_> = Device::all();
-    for device in devices {
-        let (sender, receiver) = crossbeam_channel::bounded(4096);
-        std::thread::spawn(move || initialize_cuda_request_handler(receiver, device));
-        if let Ok(mut dispatchers) = CUDA_DISPATCH.write() {
+        let devices: Vec<_> = Device::all();
+        for device in devices {
+            let (sender, receiver) = crossbeam_channel::bounded(4096);
+            std::thread::spawn(move || initialize_cuda_request_handler(receiver, device));
             dispatchers.push(sender);
         }
     }
