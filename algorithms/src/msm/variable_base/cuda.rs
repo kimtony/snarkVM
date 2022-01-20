@@ -254,25 +254,23 @@ pub(super) fn msm_cuda<G: AffineCurve>(
     }
 
     let (sender, receiver) = crossbeam_channel::bounded(1);
-    let dispatcher;
     if let Ok(dispatchers) = CUDA_DISPATCH.read() {
-        if let Some(d) = dispatchers.get(gpu_index as usize) {
-            dispatcher = d;
+        if let Some(dispatcher) = dispatchers.get(gpu_index as usize) {
+            dispatcher.send(CudaRequest {
+                bases: unsafe { std::mem::transmute(bases.to_vec()) },
+                scalars: unsafe { std::mem::transmute(scalars.to_vec()) },
+                response: sender,
+            })
+            .map_err(|_| GPUError::DeviceNotFound)?;
+            match receiver.recv() {
+                Ok(x) => unsafe { std::mem::transmute_copy(&x) },
+                Err(_) => Err(GPUError::DeviceNotFound),
+            }
         } else {
-            return Err(GPUError::DeviceNotFound);
+            Err(GPUError::DeviceNotFound)
         }
     } else {
-        return Err(GPUError::Generic("Failed to read cuda dispatchers".to_string()));
-    }
-    dispatcher.send(CudaRequest {
-        bases: unsafe { std::mem::transmute(bases.to_vec()) },
-        scalars: unsafe { std::mem::transmute(scalars.to_vec()) },
-        response: sender,
-    })
-        .map_err(|_| GPUError::DeviceNotFound)?;
-    match receiver.recv() {
-        Ok(x) => unsafe { std::mem::transmute_copy(&x) },
-        Err(_) => Err(GPUError::DeviceNotFound),
+        Err(GPUError::Generic("Failed to read cuda dispatchers".to_string()))
     }
 }
 
