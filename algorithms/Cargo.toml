@@ -158,6 +158,8 @@ version = "1"
 [dependencies.rust-gpu-tools]
 version = "0.5.0"
 optional = true
+default-features = false
+features = ["cuda"]
 
 [dependencies.serde]
 version = "1.0"
