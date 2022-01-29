@@ -156,10 +156,12 @@ default = [
   "snarkvm-gadgets/default",
   "snarkvm-marlin/default",
   "snarkvm-parameters/default",
-  "snarkvm-utilities/default"
+  "snarkvm-utilities/default",
+  "debug_assertions",
 ]
 wasm = [ "full", "snarkvm-algorithms/wasm", "snarkvm-gadgets/full", "snarkvm-marlin/wasm", "snarkvm-parameters/wasm" ]
 full = [ "testnet1", "testnet2" ]
 print-trace = [ "snarkvm-profiler/print-trace" ]
 testnet1 = []
 testnet2 = []
+debug_assertions = []
