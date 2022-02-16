@@ -92,9 +92,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.52"
+version = "1.0.53"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "84450d0b4a8bd1ba4144ce8ce718fbc5d071358b1e5384bace6536b3d1f2d5b3"
+checksum = "94a45b455c14666b85fc40a019e8ab9eb75e3a124e05494f5397122bc9eb06e0"
 
 [[package]]
 name = "arrayref"
@@ -1024,9 +1024,9 @@ checksum = "1aab8fc367588b89dcee83ab0fd66b72b50b72fa1904d7095045ace2b0c81c35"
 
 [[package]]
 name = "js-sys"
-version = "0.3.55"
+version = "0.3.56"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7cc9ffccd38c451a86bf13657df244e9c3f37493cce8e5e21e940963777acc84"
+checksum = "a38fc24e30fd564ce974c02bf1d337caddff65be6cc4735a1f7eab22a7440f04"
 dependencies = [
  "wasm-bindgen",
 ]
@@ -1597,16 +1597,18 @@ dependencies = [
 
 [[package]]
 name = "rust-gpu-tools"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1785ab2a8accec77189e23fead221f2543cebf7ccf569788511cdac9f5fad168"
+checksum = "125c95cf8853ba6d9c2aaef77a57e1f9556664d55d947921f0bad6923ec48db0"
 dependencies = [
  "dirs 2.0.2",
  "fil-rustacuda",
  "hex",
  "lazy_static",
  "log",
+ "once_cell",
  "sha2 0.8.2",
+ "temp-env",
  "thiserror",
 ]
 
@@ -1751,9 +1753,9 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.133"
+version = "1.0.136"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "97565067517b60e2d1ea8b268e59ce036de907ac523ad83a0475da04e818989a"
+checksum = "ce31e24b01e1e524df96f1c2fdd054405f8d7376249a5110886fb4b658484789"
 dependencies = [
  "serde_derive",
 ]
@@ -1770,9 +1772,9 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.133"
+version = "1.0.136"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed201699328568d8d08208fdd080e3ff594e6c422e438b6705905da01005d537"
+checksum = "08597e7152fcd306f41838ed3e37be9eaeed2b61c42e2117266a554fab4662f9"
 dependencies = [
  "proc-macro2 1.0.36",
  "quote 1.0.10",
@@ -1800,6 +1802,28 @@ dependencies = [
  "itoa 0.4.8",
  "ryu",
  "serde",
+]
+
+[[package]]
+name = "serial_test"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e0bccbcf40c8938196944a3da0e133e031a33f4d6b72db3bda3cc556e361905d"
+dependencies = [
+ "lazy_static",
+ "parking_lot",
+ "serial_test_derive",
+]
+
+[[package]]
+name = "serial_test_derive"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b2acd6defeddb41eb60bb468f8825d0cfd0c2a76bc03bfd235b6a1dc4f6a1ad5"
+dependencies = [
+ "proc-macro2 1.0.36",
+ "quote 1.0.10",
+ "syn 1.0.81",
 ]
 
 [[package]]
@@ -1839,7 +1863,7 @@ checksum = "f2dd574626839106c320a323308629dcb1acfc96e32a8cba364ddc61ac23ee83"
 
 [[package]]
 name = "snarkvm"
-version = "0.7.5"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "colored",
@@ -1859,7 +1883,7 @@ dependencies = [
 
 [[package]]
 name = "snarkvm-algorithms"
-version = "0.7.5"
+version = "0.8.0"
 dependencies = [
  "aleo-std",
  "anyhow",
@@ -1885,6 +1909,7 @@ dependencies = [
  "rust-gpu-tools",
  "serde",
  "serde_json",
+ "serial_test",
  "sha2 0.10.1",
  "smallvec",
  "snarkvm-curves",
@@ -1897,7 +1922,7 @@ dependencies = [
 
 [[package]]
 name = "snarkvm-circuits"
-version = "0.7.5"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "blake2",
@@ -1926,7 +1951,7 @@ dependencies = [
 
 [[package]]
 name = "snarkvm-curves"
-version = "0.7.5"
+version = "0.8.0"
 dependencies = [
  "bincode",
  "criterion",
@@ -1942,7 +1967,7 @@ dependencies = [
 
 [[package]]
 name = "snarkvm-derives"
-version = "0.7.5"
+version = "0.8.0"
 dependencies = [
  "proc-macro-crate",
  "proc-macro-error",
@@ -1953,7 +1978,7 @@ dependencies = [
 
 [[package]]
 name = "snarkvm-dpc"
-version = "0.7.5"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "base58",
@@ -1986,11 +2011,12 @@ dependencies = [
 
 [[package]]
 name = "snarkvm-fields"
-version = "0.7.5"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "derivative",
  "rand",
+ "rayon",
  "serde",
  "snarkvm-utilities",
  "thiserror",
@@ -1998,7 +2024,7 @@ dependencies = [
 
 [[package]]
 name = "snarkvm-gadgets"
-version = "0.7.5"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "blake2",
@@ -2023,7 +2049,7 @@ dependencies = [
 
 [[package]]
 name = "snarkvm-integration"
-version = "0.7.5"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "base58",
@@ -2049,7 +2075,7 @@ dependencies = [
 
 [[package]]
 name = "snarkvm-marlin"
-version = "0.7.5"
+version = "0.8.0"
 dependencies = [
  "bincode",
  "blake2",
@@ -2075,7 +2101,7 @@ dependencies = [
 
 [[package]]
 name = "snarkvm-parameters"
-version = "0.7.5"
+version = "0.8.0"
 dependencies = [
  "aleo-std",
  "anyhow",
@@ -2100,12 +2126,13 @@ dependencies = [
 
 [[package]]
 name = "snarkvm-polycommit"
-version = "0.7.5"
+version = "0.8.0"
 dependencies = [
  "blake2",
  "derivative",
  "digest 0.9.0",
  "hashbrown",
+ "itertools",
  "rand",
  "rand_core",
  "rayon",
@@ -2121,14 +2148,14 @@ dependencies = [
 
 [[package]]
 name = "snarkvm-profiler"
-version = "0.7.5"
+version = "0.8.0"
 dependencies = [
  "colored",
 ]
 
 [[package]]
 name = "snarkvm-r1cs"
-version = "0.7.5"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "cfg-if 1.0.0",
@@ -2143,13 +2170,17 @@ dependencies = [
 
 [[package]]
 name = "snarkvm-utilities"
-version = "0.7.5"
+version = "0.8.0"
 dependencies = [
+ "aleo-std",
  "anyhow",
  "bincode",
+ "itertools",
  "num-bigint",
+ "num_cpus",
  "rand",
  "rand_xorshift",
+ "rayon",
  "serde",
  "snarkvm-derives",
  "thiserror",
@@ -2157,7 +2188,7 @@ dependencies = [
 
 [[package]]
 name = "snarkvm-wasm"
-version = "0.7.5"
+version = "0.8.0"
 dependencies = [
  "derivative",
  "getrandom",
@@ -2243,6 +2274,15 @@ dependencies = [
  "proc-macro2 1.0.36",
  "quote 1.0.10",
  "unicode-xid 0.2.2",
+]
+
+[[package]]
+name = "temp-env"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "45107136c2ddf8c4b87453c02294fd0adf41751796e81e8ba3f7fd951977ab57"
+dependencies = [
+ "once_cell",
 ]
 
 [[package]]
@@ -2514,9 +2554,9 @@ checksum = "fd6fbd9a79829dd1ad0cc20627bf1ed606756a7f77edff7b66b7064f9cb327c6"
 
 [[package]]
 name = "wasm-bindgen"
-version = "0.2.78"
+version = "0.2.79"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "632f73e236b219150ea279196e54e610f5dbafa5d61786303d4da54f84e47fce"
+checksum = "25f1af7423d8588a3d840681122e72e6a24ddbcb3f0ec385cac0d12d24256c06"
 dependencies = [
  "cfg-if 1.0.0",
  "serde",
@@ -2526,9 +2566,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-backend"
-version = "0.2.78"
+version = "0.2.79"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a317bf8f9fba2476b4b2c85ef4c4af8ff39c3c7f0cdfeed4f82c34a880aa837b"
+checksum = "8b21c0df030f5a177f3cba22e9bc4322695ec43e7257d865302900290bcdedca"
 dependencies = [
  "bumpalo",
  "lazy_static",
@@ -2541,9 +2581,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-futures"
-version = "0.4.28"
+version = "0.4.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e8d7523cb1f2a4c96c1317ca690031b714a51cc14e05f712446691f413f5d39"
+checksum = "2eb6ec270a31b1d3c7e266b999739109abce8b6c87e4b31fcfcd788b65267395"
 dependencies = [
  "cfg-if 1.0.0",
  "js-sys",
@@ -2553,9 +2593,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-macro"
-version = "0.2.78"
+version = "0.2.79"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d56146e7c495528bf6587663bea13a8eb588d39b36b679d83972e1a2dbbdacf9"
+checksum = "2f4203d69e40a52ee523b2529a773d5ffc1dc0071801c87b3d270b471b80ed01"
 dependencies = [
  "quote 1.0.10",
  "wasm-bindgen-macro-support",
@@ -2563,9 +2603,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-macro-support"
-version = "0.2.78"
+version = "0.2.79"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7803e0eea25835f8abdc585cd3021b3deb11543c6fe226dcd30b228857c5c5ab"
+checksum = "bfa8a30d46208db204854cadbb5d4baf5fcf8071ba5bf48190c3e59937962ebc"
 dependencies = [
  "proc-macro2 1.0.36",
  "quote 1.0.10",
@@ -2576,15 +2616,15 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-shared"
-version = "0.2.78"
+version = "0.2.79"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0237232789cf037d5480773fe568aac745bfe2afbc11a863e97901780a6b47cc"
+checksum = "3d958d035c4438e28c70e4321a2911302f10135ce78a9c7834c0cab4123d06a2"
 
 [[package]]
 name = "wasm-bindgen-test"
-version = "0.3.28"
+version = "0.3.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96f1aa7971fdf61ef0f353602102dbea75a56e225ed036c1e3740564b91e6b7e"
+checksum = "45c8d417d87eefa0087e62e3c75ad086be39433449e2961add9a5d9ce5acc2f1"
 dependencies = [
  "console_error_panic_hook",
  "js-sys",
@@ -2596,9 +2636,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-test-macro"
-version = "0.3.28"
+version = "0.3.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6006f79628dfeb96a86d4db51fbf1344cd7fd8408f06fc9aa3c84913a4789688"
+checksum = "d0e560d44db5e73b69a9757a15512fe7e1ef93ed2061c928871a4025798293dd"
 dependencies = [
  "proc-macro2 1.0.36",
  "quote 1.0.10",
