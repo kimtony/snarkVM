@@ -185,7 +185,7 @@ pub trait PolynomialCommitment<F: PrimeField, CF: PrimeField>: Sized + Clone + D
     /// The commitment randomness.
     type Randomness: PCRandomness + Clone + Send + Sync;
     /// The evaluation proof for a single point.
-    type Proof: PCProof + Clone;
+    type Proof: PCProof + Clone + Sync + Send;
     /// The evaluation proof for a query set.
     type BatchProof: CanonicalSerialize
         + CanonicalDeserialize
@@ -266,14 +266,13 @@ pub trait PolynomialCommitment<F: PrimeField, CF: PrimeField>: Sized + Clone + D
         query_set: &QuerySet<F>,
         opening_challenge: F,
         rands: impl IntoIterator<Item = &'a Self::Randomness>,
-        rng: Option<&mut dyn RngCore>,
+        _rng: Option<&mut dyn RngCore>,
         gpu_index: i16,
     ) -> Result<Self::BatchProof, Error>
     where
         Self::Randomness: 'a,
         Self::Commitment: 'a,
     {
-        let rng = &mut crate::optional_rng::OptionalRng(rng);
         let poly_rand_comm: BTreeMap<_, _> = labeled_polynomials
             .into_iter()
             .zip(rands)
@@ -296,8 +295,8 @@ pub trait PolynomialCommitment<F: PrimeField, CF: PrimeField>: Sized + Clone + D
             labels.1.insert(label);
         }
 
-        let mut proofs = Vec::with_capacity(query_to_labels_map.len());
-        for (_point_name, (query, labels)) in query_to_labels_map.into_iter() {
+        let mut pool = snarkvm_utilities::ExecutionPool::<Result<_, _>>::with_capacity(query_to_labels_map.len());
+        for (_point_name, (&query, labels)) in query_to_labels_map.into_iter() {
             let mut query_polys = Vec::with_capacity(labels.len());
             let mut query_rands = Vec::with_capacity(labels.len());
             let mut query_comms = Vec::with_capacity(labels.len());
@@ -312,23 +311,25 @@ pub trait PolynomialCommitment<F: PrimeField, CF: PrimeField>: Sized + Clone + D
                 query_comms.push(*comm);
             }
 
-            let proof_time = start_timer!(|| "Creating proof");
-            let proof = Self::open(
-                ck,
-                query_polys,
-                query_comms,
-                *query,
-                opening_challenge,
-                query_rands,
-                Some(rng),
-                gpu_index,
-            )?;
-
-            end_timer!(proof_time);
-
-            proofs.push(proof);
+            pool.add_job(move || {
+                let proof_time = start_timer!(|| "Creating proof");
+                let proof = Self::open(
+                    ck,
+                    query_polys,
+                    query_comms,
+                    query,
+                    opening_challenge,
+                    query_rands,
+                    None,
+		    gpu_index,
+                );
+                end_timer!(proof_time);
+                proof
+            });
         }
         end_timer!(open_time);
+        let proofs: Vec<_> = pool.execute_all();
+        let proofs = proofs.into_iter().collect::<Result<Vec<_>, _>>()?;
 
         Ok(proofs.into())
     }

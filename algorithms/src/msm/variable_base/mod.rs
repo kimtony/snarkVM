@@ -58,9 +58,9 @@ impl VariableBaseMSM {
                 if !HAS_CUDA_FAILED.load(Ordering::SeqCst) {
                     match cuda::msm_cuda(bases, scalars, gpu_index) {
                         Ok(x) => return x,
-                        Err(e) => {
+                        Err(_e) => {
                             HAS_CUDA_FAILED.store(true, Ordering::SeqCst);
-                            eprintln!("CUDA failed, moving to next msm method. Error: {:?}", e);
+                            eprintln!("CUDA failed, moving to next msm method.");
                         }
                     }
                 }
